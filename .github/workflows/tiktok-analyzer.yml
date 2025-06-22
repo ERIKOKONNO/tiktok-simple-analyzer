@@ -1,0 +1,39 @@
+# .github/workflows/tiktok-simple-analyzer.yml
+name: Simple TikTok Analytics
+
+on:
+  schedule:
+    - cron: '0 21 * * *'  # 毎日21時に実行
+  workflow_dispatch:  # 手動実行も可能
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: |
+          npm init -y
+          npm install puppeteer-core @sparticuz/chromium nodemailer csv-parser
+
+      - name: Run TikTok Analysis
+        env:
+          TIKTOK_USERNAME: ${{ secrets.TIKTOK_USERNAME }}
+          EMAIL_USER: ${{ secrets.EMAIL_USER }}
+          EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
+        run: node analyze.js
+
+      - name: Commit data
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add data/
+          git diff --staged --quiet || git commit -m "Daily TikTok analytics $(date +%Y-%m-%d)"
+          git push
